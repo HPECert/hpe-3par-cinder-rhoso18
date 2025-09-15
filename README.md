@@ -3,6 +3,8 @@
 ## Overview
 This guide shows how to configure and deploy the HPE Cinder driver in a Red Hat OpenStack Services on OpenShift (RHOSO) 18.0 deployment. After reading this, you’ll be able to define the proper configuration and deploy single or multiple HPE Cinder back ends in a RHOSO cluster.
 
+Note: This documentation includes samples for two backends named alletra-iscsi and alletra-fc. The backend name(s) chosen has to match in the openstack-version.yaml, openstack_control_plane.yaml, and in the associated secret files.
+
 For more information about RHOSO, please refer to its [documentation pages](https://docs.redhat.com/en/documentation/red_hat_openstack_services_on_openshift/18.0/html/deploying_red_hat_openstack_services_on_openshift/index).
 
 In Red Hat OpenStack Services on OpenShift 18.0, the HPE cinder volume drivers support the following dataplanes:
@@ -31,7 +33,7 @@ Red Hat requires that you utilize the Certified HPE Cinder Volume Image when dep
 
 This container can be found in https://catalog.redhat.com/software/containers/hpe3parcinder/openstack-cinder-volume-hpe3parcinder18-0/67f4da13dd71f939eb652d57?gs&q=HPE.
 
-Ensure the certified image is added to the openstackversion CR. This is defined in the following YAML file (openstack_version.yaml):
+Ensure the certified image is added to the openstackversion CR. This is defined in the following YAML file (openstack-version.yaml):
 
 ```
 apiVersion: core.openstack.org/v1beta1
@@ -41,7 +43,8 @@ metadata:
 spec:
   customContainerImages:
     cinderVolumeImages:
-      volume1: registry.connect.redhat.com/hpe3parcinder/openstack-cinder-volume-hpe3parcinder18-0:18.0
+      alletra-iscsi: registry.connect.redhat.com/hpe3parcinder/openstack-cinder-volume-hpe3parcinder18-0:18.0
+      alletra-fc: registry.connect.redhat.com/hpe3parcinder/openstack-cinder-volume-hpe3parcinder18-0:18.0
 ```
 
 Save this file and update:
@@ -76,7 +79,21 @@ stringData:
     san_ip=<your-storage-array-ip>
     san_login=<username>
     san_password=<password>
-    [alletra-iscsi-1]
+    
+```
+Similarly, here is an example of HPE Alletra Storage Array with FC beackend (cinder-volume-alletra-fc-secrets):
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    service: cinder
+    component: cinder-volume
+  name: cinder-volume-alletra-fc-secrets
+type: Opaque
+stringData:
+  alletra-fc: |
+    [alletra-fc]
     hpe3par_api_url=https://<your-storage-array-ip>/api/v1
     hpe3par_username=<username>
     hpe3par_password=<password>
@@ -86,12 +103,15 @@ stringData:
     san_ip=<your-storage-array-ip>
     san_login=<username>
     san_password=<password>
-
+    
 ```
+
+
 Save this file and apply:
 
 ```
 oc apply -f cinder-volume-alletra-iscsi-secret.yaml
+oc apply -f cinder-volume-alletra-fc-secret.yaml
 
 ```
 
@@ -123,19 +143,7 @@ spec:
               - cinder-volume-alletra-iscsi-secrets
               networkAttachments:
               - storage
-              replicas: 1
-              resources: {}
-            alletra-iscsi-1:
-              customServiceConfig: |
-                [DEFAULT]
-                enabled_backends=alletra-iscsi
-                [alletra-iscsi-1]
-                volume_driver=cinder.volume.drivers.hpe.hpe_3par_iscsi.HPE3PARISCSIDriver
-                volume_backend_name = alletra-iscsi-1
-              customServiceConfigSecrets:
-              - cinder-volume-alletra-iscsi-secrets-1
-              networkAttachments:
-              - storage
+              - storageMgmt
               replicas: 1
               resources: {}
  
@@ -165,23 +173,10 @@ spec:
               customServiceConfigSecrets:
               - cinder-volume-alletra-fc-secrets
               networkAttachments:
-              - storage
+              - storageMgmt
               replicas: 1
               resources: {}
-            alletra-fc-1:
-              customServiceConfig: |
-                [DEFAULT]
-                enabled_backends=alletra-fc
-                [alletra-fc-1]
-                volume_driver=cinder.volume.drivers.hpe.hpe_3par_iscsi.HPE3PARFCDriver
-                volume_backend_name = alletra-fc-1
-              customServiceConfigSecrets:
-              - cinder-volume-alletra-fc-secrets-1
-              networkAttachments:
-              - storage
-              replicas: 1
-              resources: {}
- 
+            
         ...
 ```
 

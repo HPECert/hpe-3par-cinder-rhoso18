@@ -81,7 +81,7 @@ stringData:
     san_password=<password>
     
 ```
-Similarly, here is an example of HPE Alletra Storage Array with FC beackend (cinder-volume-alletra-fc-secrets):
+Similarly, here is an example of HPE Alletra Storage Array with FC backend (cinder-volume-alletra-fc-secrets):
 ```
 apiVersion: v1
 kind: Secret
